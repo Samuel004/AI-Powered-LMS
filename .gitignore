@@ -1,0 +1,40 @@
+# Node modules
+**/node_modules/
+
+# Build output
+**/dist/
+**/build/
+**/.cache/
+**/.turbo/
+**/.vite/
+
+# Environment variables
+.env
+.env.*
+!.env.example
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+lerna-debug.log*
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE/editor settings
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Misc
+coverage/
+**/.DS_Store
+.sass-cache/
+.cache/
