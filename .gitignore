@@ -7,6 +7,9 @@
 **/.cache/
 **/.turbo/
 **/.vite/
+**/.next/
+**/.parcel-cache/
+**/.output/
 
 # Environment variables
 .env
@@ -19,6 +22,7 @@ yarn-debug.log*
 pnpm-debug.log*
 lerna-debug.log*
 *.log
+*.pid
 
 # OS files
 .DS_Store
@@ -33,8 +37,56 @@ Thumbs.db
 *.sln
 *.sw?
 
-# Misc
+# Test / Playwright artifacts
+frontend/vite-project/e2e/test-results/
+frontend/vite-project/e2e/playwright-report/
+frontend/vite-project/e2e/screenshots/
+frontend/vite-project/e2e/videos/
+frontend/vite-project/e2e/traces/
+**/playwright/.cache/
+
+# Temporary / backup files
+*.bak
+*.tmp
+*.temp
+*.orig
+*.local
+*.local.*
+*.sqlite
+*.db
+*.db-journal
+*.pem
+
+# Local uploads / generated assets
+uploads/
+**/uploads/
+public/uploads/
+**/public/uploads/
+
+# Coverage / diagnostics
 coverage/
+.nyc_output/
+*.tsbuildinfo
+
+# Local helpers / scratch files
+tmp-*
+tmp-*.js
+tmp-*.cjs
+tmp-*.mjs
+
+# Project-specific generated notes
+AI_FEATURES_API.md
+AI_FEATURES_COMPLETE.md
+AI_VERIFICATION_CHECKLIST.md
+BACKEND_README.md
+FRONTEND_AI_INTEGRATION.md
+FRONTEND_SETUP.md
+IMPLEMENTATION_COMPLETE.sh
+PHASE_3_COMPLETE.md
+QUICK_REFERENCE.md
+SESSION_AI_FEATURES_SUMMARY.md
+
+# Misc
 **/.DS_Store
 .sass-cache/
 .cache/
