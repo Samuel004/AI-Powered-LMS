@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getCourseById, enrollCourse, getEnrolledCourses } from '../api/endpoints';
+import { getCourseById, enrollCourse, getEnrolledCourses, getLessonsByCourse } from '../api/endpoints';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/Card';
 import { Badge } from '../components/Badge';
 import { Button } from '../components/Button';
@@ -20,13 +20,30 @@ export const CourseDetailsPage = () => {
     const fetchData = async () => {
       try {
         const courseRes = await getCourseById(courseId);
-        setCourse(courseRes.data.course);
-        setLessons(courseRes.data.lessons || []);
+        const courseData = courseRes.data.course || courseRes.data;
+        setCourse(courseData);
 
         // Check if enrolled
         const enrolledRes = await getEnrolledCourses();
-        const enrolled = enrolledRes.data.enrollments?.some((e) => e.course?._id === courseId);
-        setIsEnrolled(enrolled);
+        const enrolled =
+          enrolledRes.data.enrollments?.some((e) => e.course?._id === courseId) ||
+          enrolledRes.data.courses?.some((e) => e.course?._id === courseId) ||
+          enrolledRes.data.courses?.some((course) => course._id === courseId);
+        setIsEnrolled(!!enrolled);
+
+        if (enrolled) {
+          try {
+            const lessonsRes = await getLessonsByCourse(courseId);
+            setLessons(Array.isArray(lessonsRes.data) ? lessonsRes.data : lessonsRes.data?.lessons || []);
+          } catch (lessonsError) {
+            if (lessonsError.response?.status === 403) {
+              console.warn('Protected course lessons are not available until enrollment.');
+              setLessons([]);
+            } else {
+              console.error('Failed to fetch lessons:', lessonsError);
+            }
+          }
+        }
       } catch (error) {
         console.error('Failed to fetch course:', error);
       } finally {
@@ -43,6 +60,13 @@ export const CourseDetailsPage = () => {
       await enrollCourse(courseId);
       setIsEnrolled(true);
       alert('Successfully enrolled in the course!');
+
+      try {
+        const lessonsRes = await getLessonsByCourse(courseId);
+        setLessons(Array.isArray(lessonsRes.data) ? lessonsRes.data : lessonsRes.data?.lessons || []);
+      } catch (lessonsError) {
+        console.error('Failed to fetch lessons after enrolling:', lessonsError);
+      }
     } catch (error) {
       console.error('Failed to enroll:', error);
       alert('Failed to enroll. Please try again.');

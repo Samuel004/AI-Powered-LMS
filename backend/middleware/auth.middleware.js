@@ -1,18 +1,20 @@
 import jwt from "jsonwebtoken";
 
 export const protectRoute = async(req,res,next)=> {
-    
-    const token =  req.cookies?.jwt;
+    let token = req.cookies?.jwt;
+    const authHeader = req.headers?.authorization || req.headers?.Authorization;
 
-        if(!token) {
-            return res.status(401).json({message:"No token!"})
-        }
+    if (!token && authHeader && authHeader.startsWith('Bearer ')) {
+        token = authHeader.split(' ')[1];
+    }
+
+    if(!token) {
+        return res.status(401).json({message:"No token!"})
+    }
     
     try{
-
         const decoded = jwt.verify(token,process.env.JWT_SECRET);
         req.user = decoded;
-        
         next();
     }catch(err){
         console.log("JWT Error:",err.message);
