@@ -25,7 +25,13 @@ dotenv.config()
 
 const app = express();
 
-app.use(express.json());
+app.use(express.json({
+  verify: (req, res, buf) => {
+    if (req.originalUrl === '/api/payments/webhook') {
+      req.rawBody = Buffer.from(buf);
+    }
+  }
+}));
 app.use(cookieParser());
 
 // Enable CORS for the frontend dev server

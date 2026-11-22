@@ -7,7 +7,8 @@ import {
   getPaymentDetails,
   getAllPayments,
   getRevenueAnalytics,
-  handleStripeWebhook
+  handleStripeWebhook,
+  createCheckoutSession
 } from "../controllers/payment.controller.js";
 
 const router = express.Router();
@@ -32,5 +33,8 @@ router.get("/admin/analytics", protectRoute, isAdmin, getRevenueAnalytics);
 
 // Stripe webhook (no auth - raw body required)
 router.post("/webhook", express.raw({ type: 'application/json' }), handleStripeWebhook);
+
+// Hosted checkout session
+router.post("/:courseId/checkout", protectRoute, createCheckoutSession);
 
 export default router;

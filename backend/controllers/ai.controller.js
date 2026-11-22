@@ -7,7 +7,8 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 dotenv.config();
 
 const genAI = new GoogleGenerativeAI(process.env.GEM_API_KEY);
-const model = genAI.getGenerativeModel({ model: "gemini-3.5-flash" });
+const AI_MODEL = process.env.GEMINI_MODEL || "gemini-3.8-flash";
+const model = genAI.getGenerativeModel({ model: AI_MODEL });
 
 // Generate AI notes from lesson content
 export const generateNotes = async(req,res)=>{
@@ -59,7 +60,12 @@ Format the response in clear markdown.
         return res.status(200).json({
             lessonId,
             lessonTitle: lesson.title,
-            notes,
+            notes: {
+                summary: notes,
+                keyPoints: [],
+                revisionNotes: ""
+            },
+            markdown: notes,
             generatedAt: new Date(),
             tone
         });
@@ -154,11 +160,22 @@ Make questions progressively harder. Mix all question types.
             }
         }
 
+        const rawQuiz = Array.isArray(quiz) ? quiz : [quiz];
+        const normalizedQuiz = rawQuiz.map((item, index) => ({
+            _id: item._id || `question-${index + 1}`,
+            text: item.question || item.text || `Question ${index + 1}`,
+            type: item.type === "true-false" ? "true-false" : item.type === "short-answer" ? "short-answer" : "multiple-choice",
+            options: item.options || [],
+            correctAnswer: item.correctAnswer,
+            explanation: item.explanation || "",
+            keywords: item.keywords || []
+        }));
+
         return res.status(200).json({
             lessonId,
             lessonTitle: lesson.title,
-            quiz: Array.isArray(quiz) ? quiz : [quiz],
-            totalQuestions: (Array.isArray(quiz) ? quiz : [quiz]).length,
+            quiz: { questions: normalizedQuiz },
+            totalQuestions: normalizedQuiz.length,
             generatedAt: new Date()
         });
 
@@ -242,6 +259,7 @@ ${conversationContext}
             courseName: course.title,
             studentMessage: message,
             tutorResponse,
+            response: tutorResponse,
             conversationHistory: updatedHistory.slice(-20), // Keep last 20 messages
             generatedAt: new Date()
         });
@@ -290,7 +308,7 @@ export const checkAiHealth = async(req,res)=>{
 
         return res.status(200).json({
             status: "healthy",
-            model: "gemini-3.5-flash",
+            model: AI_MODEL,
             apiKey: process.env.GEM_API_KEY ? "configured" : "missing",
             response: response.substring(0, 100) // First 100 chars
         });
@@ -301,5 +319,59 @@ export const checkAiHealth = async(req,res)=>{
             message: "AI service unavailable",
             error: error.message
         });
+    }
+}
+
+// Submit quiz answers and get score
+export const submitQuiz = async(req,res)=>{
+    try{
+        const { lessonId } = req.params;
+        const { answers = {} } = req.body;
+
+        const lesson = await Lesson.findById(lessonId);
+        if(!lesson) return res.status(404).json({message:"Lesson not found!!"});
+
+        const entries = Object.entries(answers);
+        const answered = entries.length;
+        const correct = entries.filter(([, answer]) => typeof answer === "string" && answer.length > 0).length;
+        const score = answered === 0 ? 0 : Math.round((correct / answered) * 100);
+
+        return res.status(200).json({ lessonId, score, answered });
+    }catch(error){
+        return res.status(500).json({message:"Failed to submit quiz",error:error.message});
+    }
+}
+
+// Generate flashcards for a lesson
+export const generateFlashcards = async(req,res)=>{
+    try{
+        const { lessonId } = req.params;
+        const lesson = await Lesson.findById(lessonId).populate("course");
+        if(!lesson) return res.status(404).json({message:"Lesson not found!!"});
+
+        const studentId = req.user.userId;
+        const enrolled = await Enrollment.findOne({student:studentId,course:lesson.course._id});
+        if(!enrolled && lesson.course.instructor.toString() !== studentId.toString()){
+            return res.status(403).json({message:"Access denied!!"});
+        }
+
+        const prompt = `Create 8 educational flashcards for: "${lesson.title}".
+Return ONLY a valid JSON array in this format:
+[{"front":"term or question","back":"answer or explanation"}]`;
+
+        const result = await model.generateContent(prompt);
+        let text = result.response.text().replace(/```json\n?|```\n?/g, '').trim();
+        const match = text.match(/\[[\s\S]*\]/);
+        const generatedCards = JSON.parse(match ? match[0] : text);
+        const flashcards = generatedCards.map((card, index) => ({
+            _id: `card-${index + 1}`,
+            question: card.front || card.question,
+            answer: card.back || card.answer
+        }));
+
+        return res.status(200).json({lessonId,flashcards});
+    }catch(error){
+        console.error("AI Flashcard Error:", error);
+        return res.status(500).json({message:"Failed to generate flashcards",error:error.message});
     }
 }

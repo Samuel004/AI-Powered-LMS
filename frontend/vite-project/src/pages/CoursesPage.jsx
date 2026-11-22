@@ -23,8 +23,9 @@ export const CoursesPage = () => {
           getCourses(page, 12, search, category),
           getCourseCategories(),
         ]);
-        setCourses(coursesRes.data.courses || []);
-        setCategories(categoriesRes.data.categories || []);
+        setCourses(Array.isArray(coursesRes.data) ? coursesRes.data : (coursesRes.data.courses || coursesRes.data.data || []));
+        const categoryData = categoriesRes.data.categories || [];
+        setCategories(categoryData.map((item) => typeof item === 'string' ? item : item.name));
       } catch (error) {
         console.error('Failed to fetch courses:', error);
       } finally {
