@@ -21,11 +21,11 @@ export function LiveClassesPage() {
     try {
       setLoading(true);
       const [upcomingRes, activeRes] = await Promise.all([
-        api.get('/live/upcoming'),
-        api.get('/live/active'),
+        api.get('/api/live/instructor/upcoming'),
+        api.get('/api/live/active'),
       ]);
-      setUpcomingClasses(upcomingRes.data || []);
-      setActiveSessions(activeRes.data || []);
+      setUpcomingClasses(upcomingRes.data.sessions || upcomingRes.data || []);
+      setActiveSessions(Array.isArray(activeRes.data) ? activeRes.data : (activeRes.data.sessions || []));
     } catch (error) {
       console.error('Failed to fetch live classes:', error);
     } finally {
@@ -35,7 +35,7 @@ export function LiveClassesPage() {
 
   const handleJoinClass = async (sessionId) => {
     try {
-      await api.post(`/live/${sessionId}/join`);
+      await api.post(`/api/live/${sessionId}/join`);
       window.location.href = `/live/${sessionId}`;
     } catch (error) {
       alert('Failed to join class');

@@ -10,7 +10,8 @@ import {
   endClass,
   getSessionHistory,
   getUpcomingClasses,
-  recordSession
+  recordSession,
+  cancelSession
 } from "../controllers/live.controller.js";
 
 const router = express.Router();
@@ -44,5 +45,9 @@ router.get("/instructor/upcoming", protectRoute, isInstructor, getUpcomingClasse
 
 // Save recording (optional)
 router.post("/:sessionId/recording", protectRoute, isInstructor, recordSession);
+
+// Cancel a class (instructor only)
+router.put("/:sessionId/cancel", protectRoute, isInstructor, cancelSession);
+router.delete("/:sessionId", protectRoute, isInstructor, cancelSession);
 
 export default router;

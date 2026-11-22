@@ -4,7 +4,7 @@ import { generateToken } from "../lib/utils.js";
 
 export const signup = async(req,res) => {
 
-    const { name,email,pass } = req.body;
+    const { name,email,pass,role = "student" } = req.body;
 
     try{
 
@@ -14,6 +14,9 @@ export const signup = async(req,res) => {
         if(pass.length < 10){
             return res.status(400).json({message:"Password must have atleast 10 characters!"});
         }
+        if(!["student", "instructor"].includes(role)){
+            return res.status(400).json({message:"Invalid role!"});
+        }
 
         const existingUser = await User.findOne({email})
         if(existingUser) return res.status(400).json({message:"Email already exists!"});
@@ -22,15 +25,19 @@ export const signup = async(req,res) => {
 
         const hashedPassword = await bcrypt.hash(pass,salt);
 
-        
-
         const newUser = await User.create({
             name,
             email,
-            password:hashedPassword
+            password:hashedPassword,
+            role
         });
 
-        res.status(201).json({message:"User has been created Successfully!"});
+        const token = generateToken(newUser,res);
+        res.status(201).json({
+            message:"User has been created Successfully!",
+            token,
+            user:{_id:newUser._id,name:newUser.name,email:newUser.email,role:newUser.role}
+        });
 
     }catch(err){
         res.status(500).json({message:err.message});
@@ -53,8 +60,12 @@ export const login = async(req,res) => {
         if(!isMatch) return res.status(400).json({message:"Invalid Password!"});
 
 
-        generateToken(user,res);
-        res.json({message:" Logged in Successfully!"});
+        const token = generateToken(user,res);
+        res.json({
+            message:" Logged in Successfully!",
+            token,
+            user:{_id:user._id,name:user.name,email:user.email,role:user.role}
+        });
 
     }catch(err){
         res.status(500).json({message:err.message});

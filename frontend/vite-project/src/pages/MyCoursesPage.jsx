@@ -68,7 +68,7 @@ export const MyCoursesPage = () => {
                     <div className="flex gap-4 mb-4 text-xs text-gray-600">
                       <div className="flex items-center gap-1">
                         <BookOpen className="w-4 h-4" />
-                        {enrollment.completedLessons?.length || 0} lessons
+                        {(typeof enrollment.completedLessons === 'number' ? enrollment.completedLessons : enrollment.completedLessons?.length || 0)} lessons
                       </div>
                       <div className="flex items-center gap-1">
                         <Clock className="w-4 h-4" />

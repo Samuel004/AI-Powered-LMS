@@ -47,7 +47,7 @@ export function MeetingRoomPage() {
   const fetchSessionDetails = async () => {
     try {
       setLoading(true);
-      const res = await api.get(`/live/${sessionId}/details`);
+      const res = await api.get(`/api/live/${sessionId}/details`);
       setSessionDetails(res.data);
       setMessages(res.data.messages || []);
       setParticipants(res.data.participants || []);
@@ -177,7 +177,7 @@ export function MeetingRoomPage() {
         timestamp: new Date(),
       };
 
-      await api.post(`/live/${sessionId}/message`, messageData);
+      await api.post(`/api/live/${sessionId}/message`, messageData);
 
       if (socketRef.current) {
         socketRef.current.emit('send-message', { sessionId, ...messageData });
@@ -194,7 +194,7 @@ export function MeetingRoomPage() {
     if (!confirm('Are you sure you want to end this session?')) return;
 
     try {
-      await api.put(`/live/${sessionId}/end`);
+      await api.put(`/api/live/${sessionId}/end`);
       alert('Session ended');
       navigate('/live-classes');
     } catch (error) {

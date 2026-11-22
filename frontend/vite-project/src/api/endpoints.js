@@ -17,22 +17,22 @@ export const getCourseCategories = () => api.get('/api/courses/categories');
 export const getTopCourses = () => api.get('/api/courses/top');
 
 // Enrollment endpoints
-export const enrollCourse = (courseId) => api.post('/api/enrollment/enroll', { courseId });
+export const enrollCourse = (courseId) => api.post(`/api/courses/${courseId}/enroll`);
 
-export const getEnrolledCourses = () => api.get('/api/enrollment/my-courses');
+export const getEnrolledCourses = () => api.get('/api/courses/enrollments/me');
 
 // Lessons endpoints
-export const getLessonsByCourse = (courseId) => api.get(`/api/lessons/${courseId}`);
+export const getLessonsByCourse = (courseId) => api.get(`/api/courses/${courseId}/lessons`);
 
-export const getLessonById = (lessonId) => api.get(`/api/lessons/lesson/${lessonId}`);
+export const getLessonById = (lessonId) => api.get(`/api/lessons/${lessonId}`);
 
 // Progress endpoints
-export const markLessonComplete = (enrollmentId, lessonId) => 
-  api.post('/api/progress/mark-complete', { enrollmentId, lessonId });
+export const markLessonComplete = (courseId, lessonId) => 
+  api.post(`/api/courses/${courseId}/lessons/${lessonId}/complete`);
 
-export const checkProgress = (courseId) => api.get(`/api/progress/${courseId}`);
+export const checkProgress = (courseId) => api.get(`/api/courses/${courseId}/progress`);
 
-export const getStudentProgress = () => api.get('/api/progress/all');
+export const getStudentProgress = () => api.get('/api/courses/enrollments/progress/all');
 
 // Student Dashboard
 export const getStudentDashboard = () => api.get('/api/student/dashboard');
@@ -66,3 +66,6 @@ export const confirmPayment = (courseId, paymentIntentId) =>
   api.post(`/api/payments/${courseId}/confirm`, { paymentIntentId });
 
 export const getPaymentHistory = () => api.get('/api/payments/history');
+
+export const createCheckoutSession = (courseId) =>
+  api.post(`/api/payments/${courseId}/checkout`, {});

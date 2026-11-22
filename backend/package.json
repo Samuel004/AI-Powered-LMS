@@ -4,8 +4,10 @@
   "description": "",
   "main": "index.js",
   "scripts": {
+    "start": "node index.js",
     "dev": "nodemon index.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "check": "node --check index.js && node --check controllers/ai.controller.js && node --check controllers/enrollment.controller.js",
+    "test": "node --test"
   },
   "keywords": [],
   "author": "",

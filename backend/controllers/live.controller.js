@@ -323,3 +323,22 @@ export const recordSession = async (req, res) => {
     return res.status(500).json({ message: "Error saving recording", error: error.message });
   }
 };
+
+// Cancel a live class (instructor only)
+export const cancelSession = async (req, res) => {
+  try {
+    const { sessionId } = req.params;
+    const instructorId = req.user.userId;
+    const session = await LiveSession.findById(sessionId);
+    if (!session) return res.status(404).json({ message: "Session not found" });
+    if (session.instructor.toString() !== instructorId.toString()) {
+      return res.status(403).json({ message: "Not authorized" });
+    }
+    session.status = "cancelled";
+    session.endedAt = new Date();
+    await session.save();
+    return res.status(200).json({ message: "Session cancelled", session });
+  } catch (error) {
+    return res.status(500).json({ message: "Error cancelling session", error: error.message });
+  }
+};

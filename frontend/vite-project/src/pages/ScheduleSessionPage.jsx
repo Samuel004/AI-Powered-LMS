@@ -24,11 +24,11 @@ export function ScheduleSessionPage() {
   const fetchCoursesAndSessions = async () => {
     try {
       const [coursesRes, sessionsRes] = await Promise.all([
-        api.get('/courses'),
-        api.get('/live/instructor/upcoming'),
+        api.get('/api/courses'),
+        api.get('/api/live/instructor/upcoming'),
       ]);
       setCourses(coursesRes.data || []);
-      setScheduledSessions(sessionsRes.data || []);
+      setScheduledSessions(sessionsRes.data.sessions || sessionsRes.data || []);
     } catch (error) {
       console.error('Failed to fetch data:', error);
     }
@@ -42,7 +42,7 @@ export function ScheduleSessionPage() {
 
     try {
       setLoading(true);
-      const response = await api.post(`/live/${selectedCourse}/schedule`, {
+      const response = await api.post(`/api/live/${selectedCourse}/schedule`, {
         title: data.title || `Live Session - ${new Date().toLocaleDateString()}`,
         description: data.description,
         scheduledAt: new Date(data.date + 'T' + data.time),
@@ -63,7 +63,7 @@ export function ScheduleSessionPage() {
     if (!confirm('Are you sure you want to delete this session?')) return;
 
     try {
-      await api.delete(`/live/${sessionId}`);
+      await api.delete(`/api/live/${sessionId}`);
       setScheduledSessions(scheduledSessions.filter((s) => s._id !== sessionId));
       alert('Session deleted successfully');
     } catch (error) {
@@ -175,9 +175,7 @@ export function ScheduleSessionPage() {
                         </p>
                         <div className="flex items-center gap-1 text-xs text-gray-600 mt-2">
                           <Clock className="w-3 h-3" />
-                          <span>
-                            {new Date(session.scheduledAt).toLocaleString()}
-                          </span>
+                          <span>{new Date(session.scheduledAt).toLocaleString()}</span>
                         </div>
                         <div className="flex gap-2 mt-3">
                           <button

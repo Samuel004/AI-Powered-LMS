@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getCourseById, enrollCourse, getEnrolledCourses, getLessonsByCourse } from '../api/endpoints';
+import { getCourseById, enrollCourse, getEnrolledCourses, getLessonsByCourse, createCheckoutSession } from '../api/endpoints';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/Card';
 import { Badge } from '../components/Badge';
 import { Button } from '../components/Button';
@@ -57,6 +57,16 @@ export const CourseDetailsPage = () => {
   const handleEnroll = async () => {
     try {
       setEnrolling(true);
+
+      if (course.price > 0) {
+        const checkoutRes = await createCheckoutSession(courseId);
+        if (checkoutRes.data.url) {
+          window.location.assign(checkoutRes.data.url);
+          return;
+        }
+        throw new Error('Checkout URL was not returned');
+      }
+
       await enrollCourse(courseId);
       setIsEnrolled(true);
       alert('Successfully enrolled in the course!');
@@ -74,6 +84,18 @@ export const CourseDetailsPage = () => {
       setEnrolling(false);
     }
   };
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('checkout') === 'success') {
+      alert('Payment successful! Refreshing your enrollment.');
+      window.history.replaceState({}, '', window.location.pathname);
+      window.location.reload();
+    } else if (params.get('checkout') === 'cancelled') {
+      alert('Checkout was cancelled. You can try again anytime.');
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+  }, []);
 
   if (loading) {
     return <div className="flex items-center justify-center min-h-screen">Loading course...</div>;

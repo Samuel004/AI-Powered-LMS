@@ -45,10 +45,13 @@ export const createPaymentIntent = async (req, res) => {
     }
 
     // Paid course - create payment intent
-   
+    const amountInCents = Math.round(Number(course.price) * 100);
+    if (!Number.isInteger(amountInCents) || amountInCents < 50) {
+      return res.status(400).json({ message: "Invalid course price" });
+    }
 
     const paymentIntent = await stripe.paymentIntents.create({
-      amount: course.price,
+      amount: amountInCents,
       currency: "usd",
       metadata: {
         courseId: courseId.toString(),
@@ -61,7 +64,7 @@ export const createPaymentIntent = async (req, res) => {
     const payment = new Payment({
       user: userId,
       course: courseId,
-      amount: course.price,
+      amount: amountInCents,
       currency: "usd",
       stripePaymentIntentId: paymentIntent.id,
       status: "pending"
@@ -74,6 +77,8 @@ export const createPaymentIntent = async (req, res) => {
       clientSecret: paymentIntent.client_secret,
       paymentIntentId: paymentIntent.id,
       amount: course.price,
+      amountInCents,
+      amountInDollars: (amountInCents / 100).toFixed(2),
       courseName: course.title
     });
   } catch (error) {
@@ -295,14 +300,77 @@ export const getRevenueAnalytics = async (req, res) => {
   }
 };
 
+// Create a hosted Stripe Checkout session
+export const createCheckoutSession = async (req, res) => {
+  try {
+    const { courseId } = req.params;
+    const userId = req.user.userId;
+    const course = await Course.findById(courseId);
+    if (!course) return res.status(404).json({ message: "Course not found" });
+
+    const existing = await Enrollment.findOne({ student: userId, course: courseId });
+    if (existing) return res.status(400).json({ message: "Already enrolled in this course" });
+
+    if (course.price === 0 || !course.price) {
+      const enrollment = await Enrollment.create({
+        student: userId,
+        course: courseId,
+        progress: 0,
+        completedLessons: 0,
+        enrolledAt: new Date()
+      });
+      return res.status(201).json({ type: "free", enrollment });
+    }
+
+    const amountInCents = Math.round(Number(course.price) * 100);
+    if (!Number.isInteger(amountInCents) || amountInCents < 50) {
+      return res.status(400).json({ message: "Invalid course price" });
+    }
+
+    const baseUrl = (process.env.CLIENT_URL || "http://127.0.0.1:5173").replace(/\/$/, "");
+    const session = await stripe.checkout.sessions.create({
+      mode: "payment",
+      line_items: [{
+        price_data: {
+          currency: "usd",
+          product_data: { name: course.title, description: course.description || "Course enrollment" },
+          unit_amount: amountInCents
+        },
+        quantity: 1
+      }],
+      success_url: `${baseUrl}/courses/${courseId}?checkout=success&session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${baseUrl}/courses/${courseId}?checkout=cancelled`,
+      metadata: { courseId: courseId.toString(), userId: userId.toString(), courseName: course.title }
+    });
+
+    await Payment.create({
+      user: userId,
+      course: courseId,
+      amount: amountInCents,
+      currency: "usd",
+      paymentId: session.id,
+      status: "pending"
+    });
+
+    return res.status(200).json({ type: "checkout", url: session.url, sessionId: session.id });
+  } catch (error) {
+    return res.status(500).json({ message: "Error creating checkout session", error: error.message });
+  }
+};
+
 // Webhook handler for Stripe events (required for async payment processing)
 export const handleStripeWebhook = async (req, res) => {
   const sig = req.headers["stripe-signature"];
   let event;
 
   try {
+    const rawBody = req.rawBody || req.body;
+    if (!Buffer.isBuffer(rawBody)) {
+      return res.status(400).json({ message: 'Webhook Error: raw request body was not preserved' });
+    }
+
     event = stripe.webhooks.constructEvent(
-      req.body,
+      rawBody,
       sig,
       process.env.STRIPE_WEBHOOK_SECRET
     );
@@ -312,6 +380,35 @@ export const handleStripeWebhook = async (req, res) => {
 
   try {
     switch (event.type) {
+      case "checkout.session.completed": {
+        const session = event.data.object;
+        const courseId = session.metadata?.courseId;
+        const userId = session.metadata?.userId;
+
+        if (courseId && userId) {
+          const existing = await Enrollment.findOne({ student: userId, course: courseId });
+          if (!existing) {
+            const enrollment = await Enrollment.create({
+              student: userId,
+              course: courseId,
+              progress: 0,
+              completedLessons: 0,
+              enrolledAt: new Date()
+            });
+            await Payment.updateOne(
+              { paymentId: session.id },
+              { status: "completed", enrollment: enrollment._id, completedAt: new Date() }
+            );
+          } else {
+            await Payment.updateOne(
+              { paymentId: session.id },
+              { status: "completed", enrollment: existing._id, completedAt: new Date() }
+            );
+          }
+        }
+        break;
+      }
+
       case "payment_intent.succeeded":
         const paymentIntent = event.data.object;
         // Handle successful payment

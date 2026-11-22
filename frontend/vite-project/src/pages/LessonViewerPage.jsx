@@ -22,10 +22,10 @@ export const LessonViewerPage = () => {
     const fetchData = async () => {
       try {
         const lessonRes = await getLessonById(lessonId);
-        setLesson(lessonRes.data.lesson);
+        setLesson(lessonRes.data.lesson || lessonRes.data);
 
         const lessonsRes = await getLessonsByCourse(courseId);
-        setLessons(lessonsRes.data.lessons || []);
+        setLessons(Array.isArray(lessonsRes.data) ? lessonsRes.data : (lessonsRes.data.lessons || []));
       } catch (error) {
         console.error('Failed to fetch lesson:', error);
       } finally {

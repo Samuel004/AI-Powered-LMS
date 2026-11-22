@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 import Course from "../models/Course.model.js";
 import Enrollment from "../models/Enrollment.model.js";
 import User from "../models/User.model.js";
@@ -43,8 +44,8 @@ export const getEnrolledCourses = async(req,res)=>{
     try{
         
         const enrollments = await Enrollment.find({student:req.user.userId}).populate("course");
-        const courses = enrollments.map(enrollment=>enrollment.course);
-        return res.status(200).json({courses});
+        const courses = enrollments.map(enrollment=>enrollment.course).filter(Boolean);
+        return res.status(200).json({enrollments,courses});
     }catch(error){
         return res.status(500).json({message:"Failed to fetch Enrolled Courses",error:error.message});
     }
@@ -92,14 +93,27 @@ export const markLessonComplete = async(req,res)=>{
             return res.status(404).json({message:"Enrollment not found! Please enroll in this course first!!"});
         }
 
-        // Check if lesson is already marked complete (prevent duplicate counting)
+        // Prevent repeated completion clicks from inflating progress.
         if(!enrollment.completedLessons) enrollment.completedLessons = 0;
 
-        // Get total lessons in course
         const totalLessons = await Lesson.countDocuments({course:courseId});
+        if (totalLessons === 0) {
+            return res.status(400).json({message:"This course has no lessons!"});
+        }
 
-        // Update enrollment
-        enrollment.completedLessons = Math.min(enrollment.completedLessons + 1, totalLessons);
+        const lessonOrder = lesson.order || 1;
+        if (lessonOrder <= enrollment.completedLessons) {
+            return res.status(200).json({
+                message:"Lesson is already marked complete!",
+                enrollment: {
+                    completedLessons: enrollment.completedLessons,
+                    totalLessons,
+                    progress: enrollment.progress || Math.round((enrollment.completedLessons / totalLessons) * 100)
+                }
+            });
+        }
+
+        enrollment.completedLessons = Math.min(lessonOrder, totalLessons);
         enrollment.progress = Math.round((enrollment.completedLessons / totalLessons) * 100);
 
         await enrollment.save();

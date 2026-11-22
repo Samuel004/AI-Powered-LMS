@@ -42,17 +42,17 @@ export const StudentDashboard = () => {
     {
       icon: Target,
       label: 'In Progress',
-      value: stats?.inProgress || 0,
+      value: stats?.inProgressCourses || 0,
     },
     {
       icon: TrendingUp,
       label: 'Completed',
-      value: stats?.completed || 0,
+      value: stats?.completedCourses || 0,
     },
     {
       icon: Clock,
       label: 'Hours Learned',
-      value: stats?.hoursLearned || 0,
+      value: stats?.hoursSpent || 0,
     },
   ];
 
@@ -99,7 +99,7 @@ export const StudentDashboard = () => {
                     </div>
                     <div>
                       <p className="text-sm text-gray-600">
-                        {course.completedLessons?.length || 0} of {course.totalLessons || 0} lessons completed
+                        {(typeof course.completedLessons === 'number' ? course.completedLessons : course.completedLessons?.length || 0)} of {course.totalLessons || 0} lessons completed
                       </p>
                     </div>
                   </CardContent>
